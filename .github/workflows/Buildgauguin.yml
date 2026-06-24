@@ -71,7 +71,7 @@ jobs:
          
       - name: BuildKernel & MakeConfig
         run: |
-         # Export Some Things
+          # Export Some Things
           export PATH="${GITHUB_WORKSPACE}/toolchains/clang/bin"
           export ARCH=arm64
           export SUBARCH=arm64
@@ -81,7 +81,8 @@ jobs:
           # cd Kernel Source Folder
           cd gauguin
           # Make Config
-          make O=out vendor/lito-perf_defconfig vendor/xiaomi/gauguin.config vendor/addon.config 2>/dev/null
+          make O=out vendor/lito-perf_defconfig vendor/xiaomi/gauguin.config vendor/addon.config
+          clear
           # Start Build
           make -j$(nproc --all) O=out Image 2>&1 | tee ${GITHUB_WORKSPACE}/build.log
           
