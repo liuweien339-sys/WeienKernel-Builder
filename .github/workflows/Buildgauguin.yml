@@ -60,7 +60,7 @@ jobs:
           # Setting Up ReSukiSU
           curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/dev/kernel/setup.sh" | bash -s dev
           # Fix TP Hook In NGKI Question
-          sed -i '170s/error/warning/g' drivers/kernelsu/
+          sed -i '170s/error/warning/g' drivers/kernelsu/Kbuild
           # Setting Up SuSFS
           curl -Lo susfs.patch https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/Patch/susfs_patch_to_4.19.patch
           curl -Lo inline.sh https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/susfs_inline_hook_patches.sh
@@ -111,7 +111,7 @@ jobs:
           sed -i "s|ksu_supported=false|ksu_supported=true|" anykernel.sh
 
           zip -r9 ../"${ZIP_NAME}.zip" * -x .git
-
+   
       - name: Upload to GitHub Actions Artifacts
         uses: actions/upload-artifact@v6
         with:
@@ -121,3 +121,28 @@ jobs:
           build.log
          if-no-files-found: error
          compression-level: 6
+
+      - name: Status
+        if: always() 
+        run: |
+          echo "======================================"
+          echo "Weien Kernel Debug Message"
+          echo "======================================"
+  
+          echo "Core Status:"
+          nproc
+          echo ""
+          
+          echo "⚙️  Clang Version:"
+          clang --version | head -n1
+          echo ""
+          
+          if [ "${{ steps.build.outcome }}" == "success" ]; then
+              echo "Build Successful"
+          else
+              echo "Build Failed (退出码: ${{ steps.build.exitcode }})"
+          fi
+          echo ""
+          
+          echo "BuildDate: $(date '+%Y-%m-%d %H:%M:%S')"
+          echo "======================================"
