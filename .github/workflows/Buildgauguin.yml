@@ -125,24 +125,33 @@ jobs:
       - name: Status
         if: always() 
         run: |
+          echo ""
           echo "======================================"
           echo "Weien Kernel Debug Message"
           echo "======================================"
-  
+         
           echo "Core Status:"
-          nproc
+          nproc -all
           echo ""
           
-          echo "⚙️  Clang Version:"
+          echo "Clang Version:"
           clang --version | head -n1
+          echo ""
+
+          echo "Ubuntu Version:"
+          cat /etc/os-release
+          echo ""
+
+          echo "Ubuntu Kernel Version:"
+          uname -a
           echo ""
           
           if [ "${{ steps.build.outcome }}" == "success" ]; then
               echo "Build Successful"
           else
-              echo "Build Failed (退出码: ${{ steps.build.exitcode }})"
+              echo "Build Failed (Exit with: ${{ steps.build.exitcode }})"
           fi
           echo ""
           
-          echo "BuildDate: $(date '+%Y-%m-%d %H:%M:%S')"
+          echo "BuildDate: $(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M:%S')"
           echo "======================================"
