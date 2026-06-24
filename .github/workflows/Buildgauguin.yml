@@ -69,7 +69,7 @@ jobs:
 
           touch ./.scmversion
          
-      - name: Make Kernel Configs
+      - name: BuildKernel & MakeConfig
         run: |
          # Export Some Things
           export PATH="${GITHUB_WORKSPACE}/toolchains/clang/bin"
@@ -80,24 +80,10 @@ jobs:
           export CROSS_COMPILE=aarch64-linux-gnu-
           # cd Kernel Source Folder
           cd gauguin
-
-            make O=out vendor/lito-perf_defconfig vendor/xiaomi/gauguin.config vendor/addon.config
-          
-      - name: Build Kernel Image
-        run: |
-          # Export Some Things
-          export PATH="${GITHUB_WORKSPACE}/toolchains/clang/bin"
-          export ARCH=arm64
-          export SUBARCH=arm64
-          export LLVM=1
-          export LLVM_IAS=1
-          export CROSS_COMPILE=aarch64-linux-gnu-
-
-          # cd Kernel Source Folder
-          cd gauguin
-          
+          # Make Config
+          make O=out vendor/lito-perf_defconfig vendor/xiaomi/gauguin.config vendor/addon.config 2>/dev/null
           # Start Build
-          make -j$(nproc) O=out Image 2>&1 | tee ${GITHUB_WORKSPACE}/build.log
+          make -j$(nproc --all) O=out Image 2>&1 | tee ${GITHUB_WORKSPACE}/build.log
           
       - name: Make AnyKernel3
         run: |
@@ -131,7 +117,7 @@ jobs:
           echo "======================================"
          
           echo "Core Status:"
-          nproc -all
+          nproc --all
           echo ""
           
           echo "Clang Version:"
