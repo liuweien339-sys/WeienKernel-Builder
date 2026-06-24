@@ -1,0 +1,123 @@
+name: Build WeienKernel (gauguin)
+
+on:
+  workflow_dispatch:
+jobs:
+  BuildWeienKernel:
+    env:
+        GH_TOKEN: ${{ github.token }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+      checks: read
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Setup SWAP
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 16
+          
+      - name: Install build dependencies
+        run: |
+         # Download Toolchain
+          sudo apt update
+          sudo apt install -y \
+          bc bison flex \
+          libssl-dev \
+          libelf-dev \
+          libdw-dev \
+          build-essential \
+          lz4 \
+          git \
+          python3 \
+          curl \
+          dwarves \
+          cpio \
+          gcc-aarch64-linux-gnu \
+          linux-tools-common
+          
+      - name: Clone Kernel Source
+        run: |
+         # Clone WeienKernel OpenSource
+          git clone https://github.com/liuweien339-sys/android_WeienKernel_xiaomi_gauguin.git gauguin --depth=1 -b lineage-23.2-kernel2.0
+          
+      - name: Download AOSP Clang
+        run: |
+          # Download Clang
+          wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android16-qpr2-release/clang-r563880c.tar.gz
+          # Papering Unzip Clang
+          mkdir -p toolchains/clang
+          # Unzip Clang
+          tar -xf "clang-r563880c.tar.gz" -C "toolchains/clang" || exit 1
+
+      - name: Include goodies
+        run: |
+          # cd Kernel Source Folder
+          cd gauguin
+          
+          # Setting Up ReSukiSU
+          curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/dev/kernel/setup.sh" | bash -s dev
+          # Fix TP Hook In NGKI Question
+          sed -i '170s/error/warning/g' drivers/kernelsu/
+          # Setting Up SuSFS
+          curl -Lo susfs.patch https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/Patch/susfs_patch_to_4.19.patch
+          curl -Lo inline.sh https://raw.githubusercontent.com/JackA1ltman/NonGKI_Kernel_Build_2nd/refs/heads/mainline/Patches/susfs_inline_hook_patches.sh
+              patch -p1 < susfs.patch || true
+              bash inline.sh || true
+
+          touch ./.scmversion
+         
+      - name: Make Kernel Configs
+        run: |
+         # Export Some Things
+          export PATH="${GITHUB_WORKSPACE}/toolchains/clang/bin"
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export LLVM=1
+          export LLVM_IAS=1
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          # cd Kernel Source Folder
+          cd gauguin
+
+            make O=out vendor/lito-perf_defconfig vendor/xiaomi/gauguin.config vendor/addon.config
+          
+      - name: Build Kernel Image
+        run: |
+          # Export Some Things
+          export PATH="${GITHUB_WORKSPACE}/toolchains/clang/bin"
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export LLVM=1
+          export LLVM_IAS=1
+          export CROSS_COMPILE=aarch64-linux-gnu-
+
+          # cd Kernel Source Folder
+          cd gauguin
+          
+          # Start Build
+          make -j$(nproc) O=out Image 2>&1 | tee ${GITHUB_WORKSPACE}/build.log
+          
+      - name: Make AnyKernel3
+        run: |
+          # Make AK3
+          ZIP_NAME="gauguinWeienKernelBuild"
+          git clone https://github.com/Kernel-SU/AnyKernel3.git
+          cp ${{ inputs.soc }}/out/arch/arm64/boot/Image ${GITHUB_WORKSPACE}/AnyKernel3/Image
+          
+          cd AnyKernel3
+
+          sed -i "s|ksu_supported=false|ksu_supported=true|" anykernel.sh
+
+          zip -r9 ../"${ZIP_NAME}.zip" * -x .git
+
+      - name: Upload to GitHub Actions Artifacts
+        uses: actions/upload-artifact@v6
+        with:
+         name: kernel
+         path: |
+          *.zip
+          build.log
+         if-no-files-found: error
+         compression-level: 6
